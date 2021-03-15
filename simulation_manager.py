@@ -30,8 +30,9 @@ class SimulationManager:
         self.marketSize = 3
 
         # simulation settings
-        self.numberOfSimulationRuns = None
-        self.sizeOfActionSet = 101
+        self.sizeOfActionSet = 11
+        self.numberOfSimulationRuns = 10
+
         self.updateInterval = 1
         self.maxNumberOfPeriods = self.sizeOfActionSet * self.sizeOfActionSet * 5000
         self.minNumberOfConvergedPeriods = 100 * self.updateInterval
@@ -59,7 +60,7 @@ class SimulationManager:
 
         if enlighten:
             manager = enlighten.get_manager()
-            self.pbar = manager.counter(total=self.sizeOfActionSet,
+            self.pbar = manager.counter(total=self.numberOfSimulationRuns,
                                         desc='Ticks', unit='ticks')
         else:
             self.pbar = None
@@ -67,7 +68,6 @@ class SimulationManager:
 
     def singleSimulation(self):
         self.resetEnvironment()
-        self.numberOfSimulationRuns = 100
         info_text = f"Simulating {self.numberOfSimulationRuns} runs interacting in {self.marketTiming} time in a {self.competition} competition with {self.marketSize} firms (alpha = {self.alpha}  delta = {self.delta} )"
         logger.info(info_text)
         self.simulate()
@@ -220,6 +220,7 @@ class SimulationManager:
             simulationRun.simulate()
             self._update_progress_bar()
 
+            tic = datetime.now()
             self.storeData(
                 simulationRun.getMeanPrice(),
                 simulationRun.getSDPrice(),
@@ -227,6 +228,8 @@ class SimulationManager:
                 simulationRun.getMeanProfit(),
                 simulationRun.getDegreeOfTacitCollusion(),
                 simulationRun.getNumberOfPeriods())
+            toc = datetime.now()
+            logger.debug("Saving data took: %s", toc-tic)
         foo = len(list(filter(lambda x: x < self.marketSize, self.pricesSD))) * 100.0 / self.numberOfSimulationRuns
         print(f"  ->  Degree of Tacit Collusion: {get_mean(self.degrees)}; colluding in {foo} ")
 

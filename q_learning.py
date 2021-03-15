@@ -1,4 +1,5 @@
 from functools import lru_cache
+from math import floor
 from typing import List, Optional
 import random
 import numpy as np
@@ -90,7 +91,7 @@ class QLearning:
         if self.competition_type == "bertrand":
             raise NotImplementedError("Didnt bother")
         elif self.competition_type == "cournot":
-            state = int(other_firm_1.get_quantity())
+            state = floor(other_firm_1.get_quantity())
             action = self.selectAction(state)
 
             price = self.cournot.calculatePriceDuo(action, state)
@@ -105,8 +106,8 @@ class QLearning:
         if self.competition_type == "bertrand":
             raise NotImplementedError("Didnt bother")
         elif self.competition_type == "cournot":
-            stateOtherFirm1 = round(other_firm_1.quantity)
-            stateOtherFirm2 = round(other_firm_2.quantity)
+            stateOtherFirm1 = floor(other_firm_1.quantity)
+            stateOtherFirm2 = floor(other_firm_2.quantity)
         else:
             raise ValueError(
                 f"Invalid competition type: {self.competition_type}")
@@ -151,7 +152,7 @@ class QLearning:
             return self.getMaxActionIndex(state)
         else:
             # explore
-            return random.randint(0, self.sizeOfActionSet - 1)  # I think -1 is needed. -JT-
+            return random.randint(0, self.sizeOfActionSet - 1)
 
     def getMaxActionIndex(self, state: int) -> int:
         # row = self.q[state]

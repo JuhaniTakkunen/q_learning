@@ -27,26 +27,35 @@ class SimulationRun:
 
     def simulate(self):
 
-        while (self.numberOfPeriods < self.SimulationManager.maxNumberOfPeriods and self.numberOfConvergedPeriods < self.SimulationManager.minNumberOfConvergedPeriods):
+        if self.SimulationManager.marketTiming == "discrete":
+            func = self._simulate_discrete
+        elif self.SimulationManager.marketTiming == "random":
+            func = self._simulate_random
+        else:
+            logger.error(self.SimulationManager.marketTiming)
+            raise ValueError("wut?")
 
-            if self.SimulationManager.marketTiming == "discrete":
-                if self.numberOfPeriods % self.SimulationManager.updateInterval == 0:
-                    state = [x.run_episode() for x in self.firm]
-                else:
-                    state = [x.get_state() for x in self.firm]
-            elif self.SimulationManager.marketTiming == "random":
-                state = [x.get_state() for x in self.firm]
-                randomFirm = random.randint(0, self.market_size - 1)  # I think -1 is needed. -JT-
-                state[randomFirm] = self.firm[randomFirm].run_episode()
-            else:
-                logger.error(self.SimulationManager.marketTiming)
-                raise ValueError("wut?")
-
+        while self.numberOfPeriods < self.SimulationManager.maxNumberOfPeriods and self.numberOfConvergedPeriods < self.SimulationManager.minNumberOfConvergedPeriods:
+            state = func()
             [f.set_state(s) for s, f in zip(state, self.firm)]
             [x.calculate_firm_data() for x in self.firm]
 
             self.comparePeriods()
             self.numberOfPeriods += 1
+
+    def _simulate_discrete(self):
+
+        if self.numberOfPeriods % self.SimulationManager.updateInterval == 0:
+            state = [x.run_episode() for x in self.firm]
+        else:
+            state = [x.get_state() for x in self.firm]
+        return state
+
+    def _simulate_random(self):
+        state = [x.get_state() for x in self.firm]
+        randomFirm = random.randint(0, self.market_size - 1)  # I think -1 is needed. -JT-
+        state[randomFirm] = self.firm[randomFirm].run_episode()
+        return state
 
     def comparePeriods(self):
         for x in self.firm:
@@ -64,25 +73,25 @@ class SimulationRun:
     def getMeanPrice(self):
         all_values = []
         for x in self.firm:
-            all_values.extend(x.prices)
+            all_values.extend(x.get_prices())
         return round(get_mean(all_values), ndigits=2)
 
     def getSDPrice(self):
         all_values = []
         for x in self.firm:
-            all_values.extend(x.prices)
+            all_values.extend(x.get_prices())
         return round(get_sd(all_values), ndigits=2)
 
     def getMeanQuantity(self):
         all_values = []
         for x in self.firm:
-            all_values.extend(x.quantities)
+            all_values.extend(x.get_quantities())
         return round(get_mean(all_values), ndigits=2)
 
     def getMeanProfit(self):
         all_values = []
         for x in self.firm:
-            all_values.extend(x.profits)
+            all_values.extend(x.get_profits())
         return round(get_mean(all_values), ndigits=2)
 
     def getNumberOfPeriods(self):

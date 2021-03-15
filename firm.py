@@ -1,6 +1,9 @@
+import numpy as np
+
+
 from cournot import Cournot
 from q_learning import QLearning
-
+from collections import deque
 
 import logging
 logger = logging.getLogger(__name__)
@@ -22,9 +25,11 @@ class Firm:
         self.qlearning = QLearning(seed, sim_manager)                # holds the firm's individual Q-learning algorithm
         self.get_other_firm = simulation_run.getOtherFirm
         # ArrayLists to store its parameters over the time
-        self.prices = []
-        self.quantities = []
-        self.profits = []
+        self.prices = deque(maxlen=self.examination_interval_size)
+        self.quantities = deque(maxlen=self.examination_interval_size)
+        self.profits = deque(maxlen=self.examination_interval_size)
+        self.cournot = Cournot()
+
         logger.debug("Init completed: %s", self.__class__)
 
 
@@ -47,6 +52,15 @@ class Firm:
         if self.competition_type == "cournot":
             return self.quantity
         return 0.0
+
+    def get_prices(self):
+        return list(self.prices)
+
+    def get_quantities(self):
+        return list(self.quantities)
+
+    def get_profits(self):
+        return list(self.profits)
 
     def run_episode(self) -> float:
 
@@ -76,48 +90,39 @@ class Firm:
         other_firm_1 = self.get_other_firm(known_firms)
         known_firms.append(other_firm_1)
 
-
         # calculate data corresponding to the states set
         if self.competition_type == "bertrand":
             raise NotImplementedError("do if you wanna")
-        if self.competition_type == "cournot":
-            cournot = Cournot()
+        elif self.competition_type == "cournot":
             state_other_firm_1 = other_firm_1.get_quantity()
 
             if self.market_size == 2:
-                self.price = cournot.calculatePriceDuo(self.quantity, state_other_firm_1)
-                self.profit = cournot.calculateProfitDuo(self.price, self.quantity)
-            if self.market_size == 3:
+                self.price = self.cournot.calculatePriceDuo(self.quantity, state_other_firm_1)
+                self.profit = self.cournot.calculateProfitDuo(self.price, self.quantity)
+            elif self.market_size == 3:
                 other_firm_2 = self.get_other_firm(known_firms)
                 state_other_firm_2 = other_firm_2.get_quantity()
 
-                self.price = cournot.calculatePriceTrio(self.quantity, state_other_firm_1, state_other_firm_2)
-                self.profit = cournot.calculateProfitTrio(self.price, self.quantity)
+                self.price = self.cournot.calculatePriceTrio(self.quantity, state_other_firm_1, state_other_firm_2)
+                self.profit = self.cournot.calculateProfitTrio(self.price, self.quantity)
 
         # add data to ArrayList for export and examination purposes
         self.prices.append(self.price)
         self.quantities.append(self.quantity)
         self.profits.append(self.profit)
 
-        # if ArrayLists hold more than the intended entries, the oldest ones get removed
-        if len(self.prices) > self.examination_interval_size:
-            self.prices.pop(0)
-            self.quantities.pop(0)
-            self.profits.pop(0)
-
     def check_if_last_periods_are_identical(self) -> bool:
         if len(self.prices) > 1 or len(self.quantities) > 1:
 
             if self.competition_type == "bertrand":
                 raise NotImplementedError("Didnt bother")
-
             elif self.competition_type == "cournot":
-                if abs(self.quantities[-1] - self.quantities[-2]) < 0.00001:
+                if abs(self.quantities[-1] - self.quantities[-2]) < 0.1:
                     # print("difference less than 0.01")
                     return True
-
             else:
                 raise ValueError(f"what type is this?? {self.competition_type}")
+
         return False
 
     def get_price(self) -> float:
