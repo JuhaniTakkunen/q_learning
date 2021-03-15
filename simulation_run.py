@@ -26,28 +26,24 @@ class SimulationRun:
         logger.debug("init completed: %s", self.__class__)
 
     def simulate(self):
-        state: List[float] = [None] * self.market_size
 
         while (self.numberOfPeriods < self.SimulationManager.maxNumberOfPeriods and self.numberOfConvergedPeriods < self.SimulationManager.minNumberOfConvergedPeriods):
-            for x in range(self.market_size):
-                state[x] = self.firm[x].get_state()
 
             if self.SimulationManager.marketTiming == "discrete":
                 if self.numberOfPeriods % self.SimulationManager.updateInterval == 0:
-                    for x in range(self.market_size):
-                        state[x] = self.firm[x].run_episode()
+                    state = [x.run_episode() for x in self.firm]
+                else:
+                    state = [x.get_state() for x in self.firm]
             elif self.SimulationManager.marketTiming == "random":
+                state = [x.get_state() for x in self.firm]
                 randomFirm = random.randint(0, self.market_size - 1)  # I think -1 is needed. -JT-
                 state[randomFirm] = self.firm[randomFirm].run_episode()
             else:
                 logger.error(self.SimulationManager.marketTiming)
                 raise ValueError("wut?")
 
-            for x in range(self.market_size):
-                self.firm[x].set_state(state[x])
-
-            for x in range(self.market_size):
-                self.firm[x].calculate_firm_data()
+            [f.set_state(s) for s, f in zip(state, self.firm)]
+            [x.calculate_firm_data() for x in self.firm]
 
             self.comparePeriods()
             self.numberOfPeriods += 1

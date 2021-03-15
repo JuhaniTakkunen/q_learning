@@ -3,6 +3,11 @@ import math
 from datetime import datetime
 from typing import List
 
+try:
+    import enlighten
+except ImportError:
+    enlighten = None
+
 from calculation import get_mean, get_sd
 from simulation_run import SimulationRun
 
@@ -14,6 +19,7 @@ logger = logging.getLogger(__name__)
 
 logger.info("Start program")
 logger.debug("logging level set to debug")
+
 
 class SimulationManager:
     def __init__(self):
@@ -50,6 +56,13 @@ class SimulationManager:
         self.startingTimeInMillis = None
         self.dtf = None
         logger.debug("init completed: %s", self.__class__)
+
+        if enlighten:
+            manager = enlighten.get_manager()
+            self.pbar = manager.counter(total=self.sizeOfActionSet,
+                                        desc='Ticks', unit='ticks')
+        else:
+            self.pbar = None
 
 
     def singleSimulation(self):
@@ -194,6 +207,10 @@ class SimulationManager:
             print(self.marketTiming, self.competition)
             raise NotImplementedError("Did not bother")
 
+    def _update_progress_bar(self):
+        if self.pbar:
+            self.pbar.update()
+
     def simulate(self):
         self.startingTime = datetime.now()
 
@@ -201,6 +218,7 @@ class SimulationManager:
             logger.info(f" - Period {counter +1 } of {self.numberOfSimulationRuns}")
             simulationRun = SimulationRun(seed=counter, sim_manager=self)
             simulationRun.simulate()
+            self._update_progress_bar()
 
             self.storeData(
                 simulationRun.getMeanPrice(),
